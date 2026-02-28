@@ -1,0 +1,20 @@
+{
+  "name": "UVectorFinder",
+  "id": "000000000000000000",
+  "api": "1.0.0",
+  "main": "dist/code.js",
+  "ui": "dist/ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"]
+  },
+  "menu": [
+    { "name": "Settings", "command": "open-settings" },
+    { "separator": true },
+    { "name": "Search in Frame", "command": "search-frame" },
+    { "name": "Search in Section", "command": "search-section" },
+    { "name": "Search in Page", "command": "search-page" },
+    { "name": "Search in File", "command": "search-file" }
+  ]
+}

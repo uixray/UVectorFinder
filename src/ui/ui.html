@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>/* __INLINE_CSS__ */</style>
+</head>
+<body>
+  <div class="plugin" id="app">
+
+    <!-- ═══ Settings Panel ═══ -->
+    <div class="panel" id="settings-panel">
+
+      <!-- Selection info -->
+      <div class="selection-info hidden" id="selection-info">
+        Mode: <strong>Find duplicates of &quot;<span id="selection-name"></span>&quot;</strong>
+      </div>
+
+      <!-- Scope -->
+      <div class="section">
+        <div class="section-title">Scope</div>
+        <div class="radio-group" id="scope-group">
+          <label><input type="radio" name="scope" value="frame"><span class="radio-label">Frame</span></label>
+          <label><input type="radio" name="scope" value="section"><span class="radio-label">Section</span></label>
+          <label><input type="radio" name="scope" value="page" checked><span class="radio-label">Page</span></label>
+          <label><input type="radio" name="scope" value="file"><span class="radio-label">File</span></label>
+        </div>
+      </div>
+
+      <!-- Method -->
+      <div class="section">
+        <div class="section-title">Comparison Method</div>
+        <div class="radio-group" id="method-group">
+          <label><input type="radio" name="method" value="vectorPaths" checked><span class="radio-label">vectorPaths</span></label>
+          <label><input type="radio" name="method" value="fillGeometry"><span class="radio-label">fillGeometry</span></label>
+        </div>
+      </div>
+
+      <!-- Tolerance -->
+      <div class="section">
+        <div class="section-title">Tolerance</div>
+        <div class="tolerance-chips" id="tolerance-chips">
+          <button class="chip" data-value="0">Exact</button>
+          <button class="chip active" data-value="0.5">Pixel</button>
+          <button class="chip" data-value="2">Relaxed</button>
+          <button class="chip" data-value="5">Loose</button>
+        </div>
+        <div class="tolerance-row">
+          <input type="range" id="tolerance-slider" min="0" max="10" step="0.1" value="0.5">
+          <input type="number" id="tolerance-input" min="0" max="10" step="0.1" value="0.5">
+        </div>
+      </div>
+
+      <!-- Filters -->
+      <div class="section">
+        <div class="section-title">Filters</div>
+        <div class="filters">
+          <label><input type="checkbox" id="filter-hidden"> Include hidden layers</label>
+          <label><input type="checkbox" id="filter-locked" checked> Include locked layers</label>
+        </div>
+      </div>
+
+      <!-- Search Button -->
+      <button class="btn-primary" id="btn-search">Search Duplicates</button>
+    </div>
+
+    <!-- ═══ Progress Panel ═══ -->
+    <div class="panel hidden" id="progress-panel">
+      <div class="progress-container">
+        <div class="state-icon">&#x1F50D;</div>
+        <div class="progress-text" id="progress-text">Searching...</div>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <button class="btn-secondary" id="btn-cancel">Cancel</button>
+      </div>
+    </div>
+
+    <!-- ═══ Results Panel ═══ -->
+    <div class="panel hidden" id="results-panel">
+      <div class="results-header">
+        <button class="btn-secondary" id="btn-back">&larr; Back</button>
+        <button class="btn-secondary" id="btn-clear-highlights">Clear Highlights</button>
+      </div>
+      <div class="results-summary" id="results-summary"></div>
+      <div id="clusters-list"></div>
+    </div>
+
+    <!-- ═══ Empty State ═══ -->
+    <div class="panel hidden" id="empty-panel">
+      <div class="empty-state">
+        <div class="state-icon">&#x2705;</div>
+        <div class="state-title">No duplicates found</div>
+        <div class="state-desc">All vectors on this scope are unique.</div>
+        <br>
+        <button class="btn-secondary" id="btn-back-empty">&larr; Back to settings</button>
+      </div>
+    </div>
+
+    <!-- ═══ Error State ═══ -->
+    <div class="panel hidden" id="error-panel">
+      <div class="error-state">
+        <div class="state-icon">&#x26A0;</div>
+        <div class="state-title">Search Error</div>
+        <div class="state-desc" id="error-message"></div>
+        <br>
+        <button class="btn-secondary" id="btn-back-error">&larr; Try again</button>
+      </div>
+    </div>
+
+    <!-- ═══ Toast Notifications ═══ -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <!-- ═══ Footer ═══ -->
+    <div class="footer">UVectorFinder v1.0</div>
+
+    <!-- ═══ Confirm Modal ═══ -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal">
+        <h3>Convert to Component?</h3>
+        <p id="modal-text">This will create a component from one vector and replace others with instances. This cannot be easily undone.</p>
+        <div class="modal-buttons">
+          <button class="btn-secondary" id="modal-cancel">Cancel</button>
+          <button class="btn-danger" id="modal-confirm">Convert</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>/* __INLINE_JS__ */</script>
+</body>
+</html>
