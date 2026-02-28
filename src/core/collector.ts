@@ -5,20 +5,35 @@ type VectorLikeNode = VectorNode | BooleanOperationNode;
 
 /**
  * Collect all target vector nodes within the given scope, applying filters.
+ * When rootNodeId is provided, uses that node directly as the search root
+ * (for container-scoped search: Frame, Group, Component, Section).
  */
 export async function collectNodes(
   scope: SearchScope,
-  filters: SearchFilters
+  filters: SearchFilters,
+  rootNodeId?: string
 ): Promise<VectorLikeNode[]> {
   // Optimize: skip invisible children inside instances when not searching hidden
   figma.skipInvisibleInstanceChildren = !filters.includeHidden;
 
-  // For file-scope, load all pages first
-  if (scope === 'file') {
-    await figma.loadAllPagesAsync();
-  }
+  let root: BaseNode & ChildrenMixin;
 
-  const root = resolveScopeRoot(scope);
+  if (rootNodeId) {
+    // Container-scoped search: use the specific node as root
+    const node = await figma.getNodeByIdAsync(rootNodeId);
+    if (node && 'children' in node) {
+      root = node as BaseNode & ChildrenMixin;
+    } else {
+      // Fallback to scope-based resolution
+      root = resolveScopeRoot(scope);
+    }
+  } else {
+    // For file-scope, load all pages first
+    if (scope === 'file') {
+      await figma.loadAllPagesAsync();
+    }
+    root = resolveScopeRoot(scope);
+  }
 
   // Use findAllWithCriteria for performance
   const nodes = root.findAllWithCriteria({

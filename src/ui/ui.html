@@ -10,9 +10,14 @@
     <!-- ═══ Settings Panel ═══ -->
     <div class="panel" id="settings-panel">
 
-      <!-- Selection info -->
+      <!-- Selection info: vector selected -->
       <div class="selection-info hidden" id="selection-info">
         Mode: <strong>Find duplicates of &quot;<span id="selection-name"></span>&quot;</strong>
+      </div>
+
+      <!-- Selection info: container selected -->
+      <div class="selection-info hidden" id="container-info">
+        Scope: <strong>Search within <span id="container-type"></span> &quot;<span id="container-name"></span>&quot;</strong>
       </div>
 
       <!-- Scope -->
@@ -61,6 +66,9 @@
 
       <!-- Search Button -->
       <button class="btn-primary" id="btn-search">Search Duplicates</button>
+
+      <!-- Clear Highlights (always available) -->
+      <button class="btn-link" id="btn-clear-highlights-settings">Clear highlights from canvas</button>
     </div>
 
     <!-- ═══ Progress Panel ═══ -->

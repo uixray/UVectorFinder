@@ -7,6 +7,7 @@ import type {
   DuplicateCluster,
   SearchScope,
   ComparisonMethod,
+  ContainerInfo,
 } from '../types';
 
 // ── Helpers ──
@@ -29,6 +30,7 @@ function showPanel(id: string): void {
 let currentSettings: PluginSettings | null = null;
 let hasSelection = false;
 let selectionName = '';
+let containerSelection: ContainerInfo | undefined = undefined;
 let lastResult: SearchResult | null = null;
 let pendingComponentizeIds: string[] | null = null;
 
@@ -92,6 +94,7 @@ function setupButtons(): void {
   $('btn-back-empty').addEventListener('click', () => showPanel('settings-panel'));
   $('btn-back-error').addEventListener('click', () => showPanel('settings-panel'));
   $('btn-clear-highlights').addEventListener('click', () => sendToSandbox({ type: 'clear-highlights' }));
+  $('btn-clear-highlights-settings').addEventListener('click', () => sendToSandbox({ type: 'clear-highlights' }));
 
   // Modal
   $('modal-cancel').addEventListener('click', closeModal);
@@ -118,13 +121,21 @@ function buildConfig(): SearchConfig {
   const includeHidden = ($('filter-hidden') as HTMLInputElement).checked;
   const includeLocked = ($('filter-locked') as HTMLInputElement).checked;
 
-  return {
+  const config: SearchConfig = {
     mode: hasSelection ? 'selection' : 'fullScan',
     scope: (scopeRadio?.value || 'page') as SearchScope,
-    method: (methodRadio?.value || 'fillGeometry') as ComparisonMethod,
+    method: (methodRadio?.value || 'vectorPaths') as ComparisonMethod,
     tolerance,
     filters: { includeHidden, includeLocked },
   };
+
+  // When a container (Frame/Group/Component/Section) is selected,
+  // use it as the search root — ignore the scope radio
+  if (!hasSelection && containerSelection) {
+    config.rootNodeId = containerSelection.id;
+  }
+
+  return config;
 }
 
 function startSearch(): void {
@@ -172,19 +183,33 @@ function applySettings(settings: PluginSettings): void {
 
 // ── Update Selection Display ──
 
-function updateSelectionUI(has: boolean, name?: string): void {
+function updateSelectionUI(has: boolean, name?: string, container?: ContainerInfo): void {
   hasSelection = has;
   selectionName = name || '';
+  containerSelection = container;
 
-  const info = $('selection-info');
+  const vectorInfo = $('selection-info');
+  const containerInfo = $('container-info');
   const btn = $('btn-search');
 
+  // Reset both info bars
+  vectorInfo.classList.add('hidden');
+  containerInfo.classList.add('hidden');
+
   if (has) {
-    info.classList.remove('hidden');
+    // Vector selected — selection mode (find duplicates of this vector)
+    vectorInfo.classList.remove('hidden');
     $('selection-name').textContent = name || 'Unknown';
     btn.textContent = 'Search Selected';
+  } else if (container) {
+    // Container selected — search within this container
+    containerInfo.classList.remove('hidden');
+    const friendlyType = container.type.charAt(0) + container.type.slice(1).toLowerCase();
+    $('container-type').textContent = friendlyType;
+    $('container-name').textContent = container.name;
+    btn.textContent = `Search in ${friendlyType}`;
   } else {
-    info.classList.add('hidden');
+    // Nothing selected — full scan
     btn.textContent = 'Search Duplicates';
   }
 }
@@ -335,7 +360,7 @@ window.onmessage = (event: MessageEvent) => {
   switch (msg.type) {
     case 'settings-loaded':
       applySettings(msg.settings);
-      updateSelectionUI(msg.hasSelection, msg.selectionName);
+      updateSelectionUI(msg.hasSelection, msg.selectionName, msg.containerSelection);
       break;
 
     case 'search-progress': {
@@ -358,7 +383,7 @@ window.onmessage = (event: MessageEvent) => {
       break;
 
     case 'selection-changed':
-      updateSelectionUI(msg.hasSelection, msg.selectionName);
+      updateSelectionUI(msg.hasSelection, msg.selectionName, msg.containerSelection);
       break;
 
     case 'action-complete':

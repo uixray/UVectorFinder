@@ -1,4 +1,4 @@
-import { UIToSandboxMessage, SearchScope, SearchConfig } from './types';
+import { UIToSandboxMessage, SearchScope, SearchConfig, ContainerInfo } from './types';
 import { UI_WIDTH, UI_HEIGHT } from './constants';
 import { loadSettings, saveSettings } from './utils/storage';
 import { sendToUI } from './utils/messaging';
@@ -19,10 +19,12 @@ figma.on('selectionchange', () => {
   try {
     const sel = figma.currentPage.selection;
     const vec = sel.find(n => n.type === 'VECTOR' || n.type === 'BOOLEAN_OPERATION');
+    const container = detectContainerSelection(sel);
     sendToUI({
       type: 'selection-changed',
       hasSelection: !!vec,
       selectionName: vec?.name,
+      containerSelection: container,
     });
   } catch (_) {
     // Ignore selection change errors
@@ -42,6 +44,7 @@ async function init() {
     const vectorSelection = selection.find(
       n => n.type === 'VECTOR' || n.type === 'BOOLEAN_OPERATION'
     );
+    const containerSelection = detectContainerSelection(selection);
 
     const scopeMap: Record<string, SearchScope> = {
       'search-frame': 'frame',
@@ -56,6 +59,7 @@ async function init() {
       settings: commandScope ? { ...settings, scope: commandScope } : settings,
       hasSelection: !!vectorSelection,
       selectionName: vectorSelection?.name,
+      containerSelection,
     });
 
     if (commandScope) {
@@ -212,11 +216,13 @@ async function handleLoadSettings(): Promise<void> {
   const s = await loadSettings();
   const sel = figma.currentPage.selection;
   const vec = sel.find(n => n.type === 'VECTOR' || n.type === 'BOOLEAN_OPERATION');
+  const container = detectContainerSelection(sel);
   sendToUI({
     type: 'settings-loaded',
     settings: s,
     hasSelection: !!vec,
     selectionName: vec?.name,
+    containerSelection: container,
   });
 }
 
@@ -427,6 +433,33 @@ async function handleComponentize(nodeIds: string[]): Promise<void> {
       message: errorMsg,
     });
   }
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// 6. Container detection — Frame, Group, Component, Section, Instance
+// ══════════════════════════════════════════════════════════════════════
+
+const CONTAINER_TYPES = new Set([
+  'FRAME', 'GROUP', 'COMPONENT', 'COMPONENT_SET', 'SECTION', 'INSTANCE',
+]);
+
+/**
+ * Detect if the selection contains a single container node.
+ * Returns ContainerInfo if a container is selected (and no vector is selected).
+ * Priority: vector selection > container selection.
+ */
+function detectContainerSelection(selection: readonly SceneNode[]): ContainerInfo | undefined {
+  if (selection.length !== 1) return undefined;
+  const node = selection[0];
+
+  // If it's a vector, don't treat as container (vector mode takes priority)
+  if (node.type === 'VECTOR' || node.type === 'BOOLEAN_OPERATION') return undefined;
+
+  if (CONTAINER_TYPES.has(node.type)) {
+    return { id: node.id, name: node.name, type: node.type };
+  }
+
+  return undefined;
 }
 
 // ══════════════════════════════════════════════════════════════════════

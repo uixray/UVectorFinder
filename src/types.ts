@@ -17,6 +17,8 @@ export interface SearchConfig {
   method: ComparisonMethod;
   tolerance: number;
   filters: SearchFilters;
+  /** When set, search WITHIN this specific container node (Frame/Group/Component) */
+  rootNodeId?: string;
 }
 
 // ============================================================================
@@ -85,6 +87,16 @@ export interface PluginSettings {
 }
 
 // ============================================================================
+// Container Selection Info
+// ============================================================================
+
+export interface ContainerInfo {
+  id: string;
+  name: string;
+  type: string;
+}
+
+// ============================================================================
 // Progress Reporting
 // ============================================================================
 
@@ -115,9 +127,9 @@ export type UIToSandboxMessage =
 // ============================================================================
 
 export type SandboxToUIMessage =
-  | { type: 'settings-loaded'; settings: PluginSettings; hasSelection: boolean; selectionName?: string }
+  | { type: 'settings-loaded'; settings: PluginSettings; hasSelection: boolean; selectionName?: string; containerSelection?: ContainerInfo }
   | { type: 'search-progress'; progress: SearchProgress }
   | { type: 'search-complete'; result: SearchResult }
   | { type: 'search-error'; error: string }
-  | { type: 'selection-changed'; hasSelection: boolean; selectionName?: string }
+  | { type: 'selection-changed'; hasSelection: boolean; selectionName?: string; containerSelection?: ContainerInfo }
   | { type: 'action-complete'; action: string; success: boolean; message?: string };

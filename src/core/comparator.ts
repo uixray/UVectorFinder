@@ -60,7 +60,7 @@ export async function runSearch(
 
   // Phase 2: Collect nodes
   onProgress({ phase: 'collecting', current: 0, total: 0, message: 'Collecting vector nodes...' });
-  const nodes = await collectNodes(config.scope, config.filters);
+  const nodes = await collectNodes(config.scope, config.filters, config.rootNodeId);
 
   if (nodes.length === 0) {
     return emptyResult(config, Date.now() - startTime);
