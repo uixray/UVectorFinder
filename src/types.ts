@@ -72,6 +72,10 @@ export interface SearchResult {
   totalDuplicates: number;
   duration: number;
   config: SearchConfig;
+  /** Number of nodes resolved from geometry cache (0 on first run) */
+  cacheHits: number;
+  /** Total entries currently in the geometry cache */
+  cacheSize: number;
 }
 
 // ============================================================================

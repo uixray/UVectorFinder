@@ -228,10 +228,18 @@ function renderResults(result: SearchResult): void {
 
   // Summary
   const dur = (result.duration / 1000).toFixed(1);
-  $('results-summary').innerHTML =
+  let summaryHtml =
     `Found <strong>${result.totalClusters}</strong> cluster${result.totalClusters !== 1 ? 's' : ''} ` +
     `(<strong>${result.totalDuplicates}</strong> duplicate${result.totalDuplicates !== 1 ? 's' : ''}) ` +
     `among ${result.totalNodesScanned} nodes in ${dur}s`;
+
+  // Show cache stats if any hits occurred
+  if (result.cacheHits > 0) {
+    const pct = Math.round((result.cacheHits / result.totalNodesScanned) * 100);
+    summaryHtml += `<br><span class="cache-info">&#x26A1; ${result.cacheHits} cached (${pct}%)</span>`;
+  }
+
+  $('results-summary').innerHTML = summaryHtml;
 
   // Clusters
   const container = $('clusters-list');

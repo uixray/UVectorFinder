@@ -272,6 +272,11 @@ body {
 
 .results-summary strong { color: var(--figma-color-text, #333); }
 
+.cache-info {
+  font-size: 10px;
+  color: var(--figma-color-text-tertiary, #999);
+}
+
 .cluster {
   border: 1px solid var(--figma-color-border, #e5e5e5);
   border-radius: 6px;

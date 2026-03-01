@@ -2,7 +2,7 @@ import { UIToSandboxMessage, SearchScope, SearchConfig, ContainerInfo } from './
 import { UI_WIDTH, UI_HEIGHT } from './constants';
 import { loadSettings, saveSettings } from './utils/storage';
 import { sendToUI } from './utils/messaging';
-import { runSearch, cancelSearch } from './core/comparator';
+import { runSearch, cancelSearch, clearGeometryCache } from './core/comparator';
 
 // ══════════════════════════════════════════════════════════════════════
 // 1. Show UI FIRST, set message handler SYNCHRONOUSLY — no awaits!
@@ -419,6 +419,9 @@ async function handleComponentize(nodeIds: string[]): Promise<void> {
         // Continue with remaining nodes
       }
     }
+
+    // Clear geometry cache — nodes were mutated/deleted
+    clearGeometryCache();
 
     figma.notify(`Created component "${component.name}" + ${replacedCount} instance${replacedCount !== 1 ? 's' : ''}`);
     sendToUI({ type: 'action-complete', action: 'componentize', success: true });

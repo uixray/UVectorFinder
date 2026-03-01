@@ -13,6 +13,58 @@ import { parsePath } from './path-parser';
 import { normalizePaths } from './normalizer';
 import { generateFingerprint } from './hasher';
 
+// ── Geometry Cache ──────────────────────────────────────────────────
+// Caches normalized paths (the expensive part: extract → parse → normalize)
+// keyed by "nodeId:method". rawHash is used for invalidation — if the
+// node's underlying path data changed, we recompute.
+
+interface CacheEntry {
+  normalizedPaths: ParsedPath[];
+  rawHash: string;
+}
+
+const MAX_CACHE_SIZE = 50_000;
+const geometryCache = new Map<string, CacheEntry>();
+
+/** Clear the entire geometry cache. Call after operations that mutate nodes (e.g. componentize). */
+export function clearGeometryCache(): void {
+  geometryCache.clear();
+}
+
+/** Current number of entries in the cache */
+export function getGeometryCacheSize(): number {
+  return geometryCache.size;
+}
+
+/**
+ * Build a cheap hash of raw path data strings for change detection.
+ * This is much faster than re-parsing and normalizing.
+ */
+function buildRawHash(geometryData: { data: string; windingRule: string }[]): string {
+  let hash = '';
+  for (const g of geometryData) {
+    hash += g.windingRule + ':' + g.data + '|';
+  }
+  return hash;
+}
+
+/**
+ * Evict oldest entries when cache exceeds the limit.
+ * Simple strategy: drop the first half of entries (Map preserves insertion order).
+ */
+function evictIfNeeded(): void {
+  if (geometryCache.size <= MAX_CACHE_SIZE) return;
+  const toDelete = Math.floor(geometryCache.size / 2);
+  let count = 0;
+  for (const key of geometryCache.keys()) {
+    if (count >= toDelete) break;
+    geometryCache.delete(key);
+    count++;
+  }
+}
+
+// ── Search ──────────────────────────────────────────────────────────
+
 let cancelFlag = false;
 
 export function cancelSearch(): void {
@@ -66,9 +118,10 @@ export async function runSearch(
     return emptyResult(config, Date.now() - startTime);
   }
 
-  // Phase 3: Extract, normalize, hash
+  // Phase 3: Extract, normalize, hash (with caching)
   const fingerprintMap = new Map<string, VectorNodeInfo[]>();
   let processedCount = 0;
+  let cacheHits = 0;
 
   for (let i = 0; i < nodes.length; i++) {
     if (cancelFlag) {
@@ -89,27 +142,43 @@ export async function runSearch(
       await new Promise(resolve => setTimeout(resolve, 0));
     }
 
-    // Extract geometry
+    // Extract geometry (cheap — just reads node properties)
     const geometry = extractGeometry(node, config.method);
     if (!geometry || geometry.length === 0) continue;
 
-    // Parse path data
-    const parsedPaths: ParsedPath[] = [];
-    let validPaths = true;
-    for (const g of geometry) {
-      const commands = parsePath(g.data);
-      if (commands.length === 0) {
-        validPaths = false;
-        break;
+    // Check cache: key = nodeId:method
+    const cacheKey = `${node.id}:${config.method}`;
+    const rawHash = buildRawHash(geometry);
+    const cached = geometryCache.get(cacheKey);
+
+    let normalized: ParsedPath[];
+
+    if (cached && cached.rawHash === rawHash) {
+      // Cache hit — skip parse + normalize (the expensive part)
+      normalized = cached.normalizedPaths;
+      cacheHits++;
+    } else {
+      // Cache miss — full pipeline: parse → normalize
+      const parsedPaths: ParsedPath[] = [];
+      let validPaths = true;
+      for (const g of geometry) {
+        const commands = parsePath(g.data);
+        if (commands.length === 0) {
+          validPaths = false;
+          break;
+        }
+        parsedPaths.push({ commands, windingRule: g.windingRule });
       }
-      parsedPaths.push({ commands, windingRule: g.windingRule });
+      if (!validPaths) continue;
+
+      normalized = normalizePaths(parsedPaths, node.width, node.height);
+
+      // Store in cache
+      geometryCache.set(cacheKey, { normalizedPaths: normalized, rawHash });
+      evictIfNeeded();
     }
-    if (!validPaths) continue;
 
-    // Normalize
-    const normalized = normalizePaths(parsedPaths, node.width, node.height);
-
-    // Generate fingerprint
+    // Generate fingerprint (cheap — depends on tolerance, so always recalculated)
     const fingerprint = generateFingerprint(normalized, config.tolerance);
 
     // Build node info
@@ -175,6 +244,8 @@ export async function runSearch(
     totalDuplicates,
     duration: Date.now() - startTime,
     config,
+    cacheHits,
+    cacheSize: geometryCache.size,
   };
 }
 
@@ -186,6 +257,8 @@ function emptyResult(config: SearchConfig, duration: number): SearchResult {
     totalDuplicates: 0,
     duration,
     config,
+    cacheHits: 0,
+    cacheSize: geometryCache.size,
   };
 }
 
